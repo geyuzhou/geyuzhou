@@ -1,0 +1,53 @@
+import requests
+from lxml import etree
+import time
+import re
+# 1.访问主页拿到cookie
+url1 = 'http://www.beian.gov.cn/portal/index.do'
+index_response = requests.get(url1)
+cookie_set = index_response.headers['Set-Cookie']
+cookie_1 = cookie_set.split(';')[0]
+cookie_2= cookie_set.split(';')[2]
+cookie_2 = cookie_2.split(',')[1]
+cookie = cookie_1 + ';'+cookie_2
+# print(cookie)
+# index_etree = etree.HTML(index_response.text)
+
+# 2.用正则表达式提取token
+index_etree = index_response.text
+# print(index_etree)
+
+token = (re.search(r"var taken_for_user = '(.*?)';",index_etree)).group(1)
+# print(token)
+
+
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36',
+
+    'Cookie': cookie
+}
+
+url = 'http://www.beian.gov.cn/portal/recordShow'
+# url = 'http://www.beian.gov.cn/portal/recordShow?token=2af01ec0-31ce-4e45-bd89-cc191e9ad7f5'
+
+data = {
+
+    'token': token,
+}
+
+
+
+respones = requests.get(url=url,headers=headers,params=data)
+# print(respones)
+etr = etree.HTML(respones.text)
+# print(etr)
+tr_list = etr.xpath('/html/body/div[1]/div[3]/div[1]/div/marquee/table/tbody/tr')
+nowtime=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+with open('./web_url.text','a') as f:
+    f.write('*'*20+nowtime+'*'*20+'\n')
+    for url_data in tr_list:
+        name = url_data.xpath('./td[1]/a/text()')[0]
+        web_url = url_data.xpath('./td[2]/text()')[0]
+        print(name,web_url)
+
+        f.write(name +web_url+'\n')
